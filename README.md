@@ -26,6 +26,23 @@ A lightweight, containerized microservices application built to demonstrate mode
 
 ---
 
+### Architecture & Traffic Flow
+
+```mermaid
+graph TD
+    User["User / Browser\n(Client Request)"] -->|1. Sends HTTP Request to\nhttp://localhost/api/v1/auth/| Port80["Nginx API Gateway\n(Port 80 - Public Entry Point)\n• Acts as the sole public reverse proxy\n• Inspects incoming URL paths\n• Hides internal microservices from the world"]
+    
+    Port80 -->|2. Forwards request internally\nover Docker network| Port3000["Auth Microservice\n(Port 3000 - FastAPI App)\n• Listens for internal HTTP traffic\n• Executes Python application logic\n• Handles bcrypt password hashing"]
+    
+    Port3000 -->|3. Queries / Persists data\nvia SQLAlchemy| DB["PostgreSQL Database\n(Port 5432)\n• Securely stores user records\n• Isolated within the Docker backend"]
+
+    style Port80 fill:#ffcc00,stroke:#333,stroke-width:2px,color:#000
+    style Port3000 fill:#3776AB,stroke:#333,stroke-width:2px,color:#fff
+    style DB fill:#336791,stroke:#333,stroke-width:2px,color:#fff
+```
+
+---
+
 ## 📂 Project Structure
 
 ```text
