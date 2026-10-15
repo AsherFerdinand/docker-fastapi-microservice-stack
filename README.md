@@ -1,6 +1,6 @@
 # Cloud Media & Auth Microservice Platform
 
-A containerized full-stack microservices web platform built to demonstrate modern backend engineering, JWT authentication, persistent data storage, Redis caching, reverse proxy gateway routing, and a Google Drive-style web frontend.
+A containerized full-stack microservices web platform built to demonstrate modern backend engineering, JWT authentication, persistent data storage, Redis caching, reverse proxy gateway routing, and an interactive web frontend dashboard.
 
 ---
 
@@ -19,12 +19,12 @@ A containerized full-stack microservices web platform built to demonstrate moder
 
 ## 🚀 Key Architecture & Features
 
-- **Frontend Dashboard:** A Google Drive-style Web UI served on Port 80 for logging in, uploading images, viewing uploaded file grids, thumbnail rendering, and live data-source detection (Cache vs. Database).
-- **API Gateway (Nginx):** Public entry point on Port 80 routing static frontend traffic (`/`), Auth requests (`/api/v1/auth/`), and File service requests (`/api/v1/files/`).
-- **Auth Microservice:** FastAPI microservice handling bcrypt password hashing and PyJWT token generation.
-- **File Upload Microservice:** Protected by JWT Bearer security; handles image uploads, local host bind-mount storage (`./uploads`), and static image serving.
-- **Metadata Persistence:** PostgreSQL 15 relational database storing user records (`users`) and file upload metadata (`file_metadata`).
-- **In-Memory Caching (Redis):** Caching file list responses for `GET /my-files` with a 60-second TTL to accelerate response times (<1ms) and reduce database query load, featuring automated cache invalidation upon new file upload (`POST /upload`).
+- **Frontend Dashboard:** A Google Drive-style Web UI served on Port 80 featuring authentication, dynamic user avatar badges, theme switching, image grid/list layouts, search filtering, and live data-source detection (`Cache` vs. `Database`).
+- **API Gateway (Nginx):** Public entry point on Port 80 routing static frontend traffic (`/`), Auth service requests (`/api/v1/auth/`), and File service requests (`/api/v1/files/`).
+- **Auth Microservice:** FastAPI microservice handling bcrypt password hashing, account creation, and PyJWT token generation with persistent session isolation.
+- **File Upload Microservice:** Protected by JWT Bearer security; handles image uploads, local host bind-mount storage (`./uploads`), static image rendering, and automatic DB metadata tracking.
+- **Metadata Persistence:** PostgreSQL 15 relational database storing user accounts (`users`) and file upload metadata (`file_metadata`) with automatic startup retry connection handling.
+- **In-Memory Caching (Redis):** Accelerates metadata lookups (`GET /my-files`) with a 60-second TTL to deliver sub-millisecond responses and reduce database query load, featuring automatic cache invalidation upon new uploads (`POST /upload`).
 
 ---
 
@@ -60,7 +60,7 @@ cloud-media-project/
 ├── docker-compose.yml        # Docker Compose multi-container orchestration
 ├── README.md                 # Project documentation
 ├── frontend/
-│   └── index.html            # Google Drive-style web dashboard frontend
+│   └── index.html            # Interactive web dashboard frontend
 ├── gateway/
 │   └── nginx.conf            # Nginx API Gateway reverse proxy configuration
 ├── services/
@@ -108,7 +108,7 @@ cloud-media-project/
 
 | Service / Interface | Local URL | Description |
 | :--- | :--- | :--- |
-| **Web Dashboard** | [http://localhost/](http://localhost/) | Main Google Drive-style web page for authentication and uploads |
+| **Web Dashboard** | [http://localhost/](http://localhost/) | Main interactive web page for authentication and media management |
 | **Auth API Docs** | [http://localhost/api/v1/auth/docs](http://localhost/api/v1/auth/docs) | OpenAPI/Swagger interface for Auth endpoints |
 | **File Service Docs** | [http://localhost/api/v1/files/docs](http://localhost/api/v1/files/docs) | OpenAPI/Swagger interface for File processing endpoints |
 
@@ -151,7 +151,15 @@ docker exec -it local_redis redis-cli KEYS "*"
   - Built File Upload Microservice handling image files and host bind-mount storage.
   - Added PostgreSQL metadata tracking (`file_metadata`) and Redis caching with automatic invalidation.
   - Implemented Google Drive-style web frontend on Port 80 with thumbnail rendering.
+  - Implemented resilient PostgreSQL startup retry connection loops for zero cold-start failures.
 
-- [ ] **Phase 3: GitOps, CI/CD & Cloud Deployment**
-  - Set up **GitHub Actions** CI/CD pipeline for automated testing and container build checks.
-  - Provision cloud infrastructure and deploy containerized stack to Linux VPS.
+- [ ] **Phase 3: Interactive & 3D Spatial UI Enhancements**
+  - **Skeuomorphic 3D Desk Workspace:** Interactive desk view where document cards lie flat on a table, tilting in 3D space on mouse hover.
+  - **Physics Drag-and-Drop Trash Bin:** Interactive trash bin in the bottom-right corner triggering a paper crumble animation on drop and executing `DELETE /api/v1/files/{id}`.
+  - **Web HMI & Spatial Canvas:** Integration of Three.js / WebGL canvas effects for immersive spatial file inspection.
+
+- [ ] **Phase 4: Cloud Infrastructure & Advanced Microservices**
+  - **MinIO S3 Object Storage:** Offload local disk storage to S3-compatible MinIO containers using presigned upload URLs.
+  - **File Actions & Management:** Add backend file deletion, download endpoints, and a trash bin recovery queue.
+  - **AI Vector Search:** Integrate PostgreSQL `pgvector` for natural language semantic image and document content queries.
+  - **GitOps, CI/CD & Cloud Deployment:** Set up GitHub Actions CI/CD workflows and deploy the containerized stack to a cloud Linux VPS.
