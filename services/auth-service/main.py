@@ -29,7 +29,7 @@ class User(Base):
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Auth Microservice")
+app = FastAPI(title="Auth Microservice", root_path="/api/v1/auth")
 
 def get_db():
     db = SessionLocal()
@@ -50,3 +50,33 @@ def register(username: str, password: str, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
     return {"message": f"User {username} created successfully!"}
+
+import jwt
+from datetime import datetime, timedelta
+
+# Secret key to sign tokens (in production, use an environment variable)
+SECRET_KEY = "super-secret-key-change-me"
+ALGORITHM = "HS256"
+
+# Add this new login endpoint below your register endpoint
+@app.post("/login")
+def login(username: str, password: str, db: Session = Depends(get_db)):
+    # 1. Find user in database
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid username or password")
+    
+    # 2. Verify password hash
+    if not pwd_context.verify(password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Invalid username or password")
+    
+    # 3. Create a JWT token valid for 30 minutes
+    expiration = datetime.utcnow() + timedelta(minutes=30)
+    token_data = {"sub": user.username, "exp": expiration}
+    access_token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "message": f"Welcome back, {username}!"
+    }

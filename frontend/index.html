@@ -1,0 +1,148 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Drive Dashboard</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f8f9fa; color: #202124; }
+        header { background: #ffffff; padding: 16px 24px; border-bottom: 1px solid #dadce0; display: flex; align-items: center; justify-content: space-between; }
+        header h1 { font-size: 20px; color: #1a73e8; display: flex; align-items: center; gap: 8px; }
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+        .auth-card, .upload-card { background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #dadce0; margin-bottom: 24px; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #dadce0; border-radius: 4px; }
+        button { background-color: #1a73e8; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: 500; }
+        button:hover { background-color: #1557b0; }
+        .grid-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .grid-header span { font-size: 13px; color: #5f6368; background: #e8f0fe; padding: 4px 12px; border-radius: 12px; }
+        .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        .file-card { background: #ffffff; border: 1px solid #dadce0; border-radius: 8px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; }
+        .file-card:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .preview { height: 140px; background-color: #f1f3f4; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .preview img { width: 100%; height: 100%; object-fit: cover; }
+        .details { padding: 12px; }
+        .filename { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+        .meta { font-size: 12px; color: #5f6368; line-height: 1.4; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>📁 Cloud Drive</h1>
+    <div id="userInfo" style="font-size: 14px; color: #5f6368;">Not Logged In</div>
+</header>
+
+<div class="container">
+    <div class="auth-card" id="authBox">
+        <h3>Login to Access Your Drive</h3>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+    </div>
+
+    <div class="upload-card" id="uploadBox" style="display: none;">
+        <h3>Upload File</h3>
+        <input type="file" id="fileInput" accept="image/*" style="margin: 12px 0;">
+        <button onclick="uploadFile()">Upload Image</button>
+    </div>
+
+    <div id="driveContent" style="display: none;">
+        <div class="grid-header">
+            <h2>My Files</h2>
+            <span id="dataSource">Source: Database</span>
+        </div>
+        <div class="file-grid" id="fileGrid"></div>
+    </div>
+</div>
+
+<script>
+    let token = localStorage.getItem('access_token') || '';
+
+    if (token) {
+        showDriveUI();
+        loadFiles();
+    }
+
+    async function login() {
+        const u = document.getElementById('username').value;
+        const p = document.getElementById('password').value;
+        const res = await fetch(`/api/v1/auth/login?username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`, { method: 'POST' });
+        const data = await res.json();
+
+        if (res.ok) {
+            token = data.access_token;
+            localStorage.setItem('access_token', token);
+            showDriveUI();
+            loadFiles();
+        } else {
+            alert('Login failed: ' + data.detail);
+        }
+    }
+
+    function showDriveUI() {
+        document.getElementById('authBox').style.display = 'none';
+        document.getElementById('uploadBox').style.display = 'block';
+        document.getElementById('driveContent').style.display = 'block';
+        document.getElementById('userInfo').innerText = 'Authenticated';
+    }
+
+    async function loadFiles() {
+        const res = await fetch('/api/v1/files/my-files', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.status === 401) {
+            alert('Session expired. Please log in again.');
+            localStorage.removeItem('access_token');
+            location.reload();
+            return;
+        }
+        const responseData = await res.json();
+        document.getElementById('dataSource').innerText = `Data Source: ${responseData.source}`;
+
+        const grid = document.getElementById('fileGrid');
+        grid.innerHTML = '';
+
+        responseData.data.forEach(file => {
+            const sizeKB = (file.file_size_bytes / 1024).toFixed(1);
+            const dateStr = new Date(file.uploaded_at).toLocaleString();
+            
+            grid.innerHTML += `
+                <div class="file-card">
+                    <div class="preview">
+                        <img src="${file.url}" alt="${file.filename}">
+                    </div>
+                    <div class="details">
+                        <div class="filename" title="${file.filename}">${file.filename}</div>
+                        <div class="meta">Size: ${sizeKB} KB</div>
+                        <div class="meta">Uploaded: ${dateStr}</div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    async function uploadFile() {
+        const fileInput = document.getElementById('fileInput');
+        if (!fileInput.files[0]) return alert('Select a file first');
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        const res = await fetch('/api/v1/files/upload', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+
+        if (res.ok) {
+            fileInput.value = '';
+            loadFiles();
+        } else {
+            const err = await res.json();
+            alert('Upload failed: ' + err.detail);
+        }
+    }
+</script>
+</body>
+</html>

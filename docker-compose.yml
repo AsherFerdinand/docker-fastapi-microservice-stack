@@ -20,8 +20,6 @@ services:
   auth-service:
     build: ./services/auth-service
     container_name: local_auth_service
-    ports:
-      - "3000:3000"
     environment:
       - DB_HOST=postgres
       - DB_USER=admin
@@ -30,6 +28,33 @@ services:
     depends_on:
       - postgres
       - redis
+
+  file-service:
+    build: ./services/file-service
+    container_name: local_file_service
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=admin
+      - DB_PASSWORD=secretpassword
+      - DB_NAME=mediadb
+      - REDIS_HOST=redis
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      - postgres
+      - redis
+
+  nginx-gateway:
+    image: nginx:alpine
+    container_name: local_nginx_gateway
+    ports:
+      - "80:80"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend:/public_html:ro
+    depends_on:
+      - auth-service
+      - file-service
 
 volumes:
   pgdata:
