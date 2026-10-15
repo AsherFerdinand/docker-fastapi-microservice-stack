@@ -4,6 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from passlib.context import CryptContext
 import os
+import time
 
 # Database connection string using environment variables or defaults pointing to docker
 DB_USER = os.getenv("DB_USER", "admin")
@@ -11,9 +12,25 @@ DB_PASSWORD = os.getenv("DB_PASSWORD", "secretpassword")
 DB_HOST = os.getenv("DB_HOST", "localhost")  # 'postgres' when running inside docker network
 DB_NAME = os.getenv("DB_NAME", "mediadb")
 
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_NAME}"
+import time
+import os
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-engine = create_engine(DATABASE_URL)
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://admin:password@postgres:5432/mediadb")
+
+# Retry connecting to PostgreSQL up to 10 times on startup
+engine = None
+for attempt in range(10):
+    try:
+        engine = create_engine(DATABASE_URL)
+        with engine.connect() as conn:
+            break
+    except Exception as e:
+        print(f"PostgreSQL not ready yet (Attempt {attempt + 1}/10). Retrying in 2 seconds...")
+        time.sleep(2)
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -29,7 +46,10 @@ class User(Base):
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Auth Microservice", root_path="/api/v1/auth")
+app = FastAPI(
+    title="Auth Service",
+    root_path="/api/v1/auth"
+)
 
 def get_db():
     db = SessionLocal()

@@ -1,67 +1,204 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cloud Drive Dashboard</title>
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
-        body { background-color: #f8f9fa; color: #202124; }
-        header { background: #ffffff; padding: 16px 24px; border-bottom: 1px solid #dadce0; display: flex; align-items: center; justify-content: space-between; }
-        header h1 { font-size: 20px; color: #1a73e8; display: flex; align-items: center; gap: 8px; }
-        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
-        .auth-card, .upload-card { background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #dadce0; margin-bottom: 24px; }
-        input[type="text"], input[type="password"] { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #dadce0; border-radius: 4px; }
-        button { background-color: #1a73e8; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: 500; }
-        button:hover { background-color: #1557b0; }
+        :root[data-theme="light"] {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #202124;
+            --text-subtle: #5f6368;
+            --border-color: #dadce0;
+            --primary-color: #1a73e8;
+            --primary-hover: #1557b0;
+            --badge-bg: #e8f0fe;
+            --preview-bg: #f1f3f4;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-hover: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        :root[data-theme="dark"] {
+            --bg-color: #18191a;
+            --card-bg: #242526;
+            --text-color: #e4e6eb;
+            --text-subtle: #b0b3b8;
+            --border-color: #393a3b;
+            --primary-color: #4599ff;
+            --primary-hover: #2374e1;
+            --badge-bg: #263951;
+            --preview-bg: #3a3b3c;
+            --shadow: 0 1px 3px rgba(0,0,0,0.3);
+            --shadow-hover: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; margin: 0; padding: 0; transition: background-color 0.2s, border-color 0.2s, color 0.2s; }
+        body { background-color: var(--bg-color); color: var(--text-color); min-height: 100vh; }
+        
+        header { background: var(--card-bg); padding: 12px 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow); position: sticky; top: 0; z-index: 100; }
+        .logo-container { display: flex; align-items: center; gap: 12px; }
+        .logo-img { width: 36px; height: 36px; object-fit: contain; border-radius: 6px; cursor: pointer; }
+        header h1 { font-size: 20px; color: var(--primary-color); display: flex; align-items: center; gap: 10px; font-weight: 600; }
+        
+        .header-controls { display: flex; align-items: center; gap: 16px; }
+        .theme-toggle, .logo-upload-btn { background: transparent; border: 1px solid var(--border-color); color: var(--text-color); padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+        .theme-toggle:hover, .logo-upload-btn:hover { background-color: var(--preview-bg); }
+
+        .user-badge { display: flex; align-items: center; gap: 10px; background: var(--badge-bg); color: var(--primary-color); padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; border: 1px solid var(--border-color); }
+        .avatar { width: 24px; height: 24px; border-radius: 50%; background: var(--primary-color); color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+
+        .container { max-width: 1200px; margin: 24px auto; padding: 0 20px; }
+        .auth-card, .upload-card { background: var(--card-bg); padding: 24px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 24px; box-shadow: var(--shadow); }
+        input[type="text"], input[type="password"] { width: 100%; padding: 10px 14px; margin: 8px 0 16px 0; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-color); color: var(--text-color); }
+        input[type="text"]:focus, input[type="password"]:focus { outline: 2px solid var(--primary-color); border-color: transparent; }
+
+        button.btn-primary { background-color: var(--primary-color); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+        button.btn-primary:hover { background-color: var(--primary-hover); }
+
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 16px; flex-wrap: wrap; }
+        .search-box { flex: 1; max-width: 400px; position: relative; }
+        .search-box input { width: 100%; padding: 9px 16px 9px 36px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color); margin: 0; }
+        .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); opacity: 0.5; width: 16px; height: 16px; }
+
+        .view-options { display: flex; align-items: center; gap: 8px; }
+        .view-btn { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; }
+        .view-btn.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+
         .grid-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .grid-header span { font-size: 13px; color: #5f6368; background: #e8f0fe; padding: 4px 12px; border-radius: 12px; }
-        .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
-        .file-card { background: #ffffff; border: 1px solid #dadce0; border-radius: 8px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; }
-        .file-card:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .preview { height: 140px; background-color: #f1f3f4; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .preview img { width: 100%; height: 100%; object-fit: cover; }
-        .details { padding: 12px; }
-        .filename { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
-        .meta { font-size: 12px; color: #5f6368; line-height: 1.4; }
+        .grid-header span { font-size: 12px; color: var(--primary-color); background: var(--badge-bg); padding: 4px 12px; border-radius: 12px; font-weight: 600; }
+
+        .file-grid.grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        .file-grid.grid-view .file-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; box-shadow: var(--shadow); }
+        .file-grid.grid-view .file-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
+        .file-grid.grid-view .preview { height: 140px; background-color: var(--preview-bg); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .file-grid.grid-view .preview img { width: 100%; height: 100%; object-fit: cover; }
+        .file-grid.grid-view .details { padding: 12px; }
+
+        .file-grid.list-view { display: flex; flex-direction: column; gap: 8px; }
+        .file-grid.list-view .file-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow); }
+        .file-grid.list-view .preview { width: 40px; height: 40px; border-radius: 4px; overflow: hidden; margin-right: 12px; flex-shrink: 0; }
+        .file-grid.list-view .preview img { width: 100%; height: 100%; object-fit: cover; }
+        .file-grid.list-view .file-main { display: flex; align-items: center; flex: 1; }
+        .file-grid.list-view .details { display: flex; align-items: center; justify-content: space-between; flex: 1; margin-left: 12px; }
+
+        .filename { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .meta { font-size: 12px; color: var(--text-subtle); }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>📁 Cloud Drive</h1>
-    <div id="userInfo" style="font-size: 14px; color: #5f6368;">Not Logged In</div>
+    <div class="logo-container">
+        <label for="logoInput" title="Click to upload custom logo">
+            <svg id="defaultLogo" class="logo-img" viewBox="0 0 24 24" fill="none" stroke="#1a73e8" stroke-width="2">
+                <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+            </svg>
+            <img id="customLogo" class="logo-img" style="display: none;" alt="Custom Logo">
+        </label>
+        <input type="file" id="logoInput" accept="image/*" style="display: none;" onchange="updateCustomLogo(event)">
+        <h1>Cloud Drive</h1>
+    </div>
+
+    <div class="header-controls">
+        <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark</button>
+        <div id="userInfo" class="user-badge" style="display: none;">
+            <div class="avatar" id="userAvatar">U</div>
+            <span id="usernameDisplay">User</span>
+            <button onclick="logout()" style="background: none; border: none; color: var(--text-subtle); cursor: pointer; margin-left: 6px;" title="Logout">✕</button>
+        </div>
+    </div>
 </header>
 
 <div class="container">
     <div class="auth-card" id="authBox">
-        <h3>Login to Access Your Drive</h3>
+        <h3 style="margin-bottom: 12px;">Login to Access Your Drive</h3>
         <input type="text" id="username" placeholder="Username">
         <input type="password" id="password" placeholder="Password">
-        <button onclick="login()">Login</button>
+        <button class="btn-primary" onclick="login()">Login</button>
     </div>
 
     <div class="upload-card" id="uploadBox" style="display: none;">
         <h3>Upload File</h3>
         <input type="file" id="fileInput" accept="image/*" style="margin: 12px 0;">
-        <button onclick="uploadFile()">Upload Image</button>
+        <br>
+        <button class="btn-primary" onclick="uploadFile()">Upload Image</button>
     </div>
 
     <div id="driveContent" style="display: none;">
+        <div class="toolbar">
+            <div class="search-box">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="searchInput" placeholder="Search files by name..." oninput="filterFiles()">
+            </div>
+            <div class="view-options">
+                <button class="view-btn active" id="gridViewBtn" onclick="setViewMode('grid')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    Grid
+                </button>
+                <button class="view-btn" id="listViewBtn" onclick="setViewMode('list')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    List
+                </button>
+            </div>
+        </div>
+
         <div class="grid-header">
             <h2>My Files</h2>
             <span id="dataSource">Source: Database</span>
         </div>
-        <div class="file-grid" id="fileGrid"></div>
+
+        <div class="file-grid grid-view" id="fileGrid"></div>
     </div>
 </div>
 
 <script>
     let token = localStorage.getItem('access_token') || '';
+    let currentUsername = localStorage.getItem('logged_username') || '';
+    let allFiles = [];
+    let currentViewMode = 'grid';
+
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateThemeBtnText(savedTheme);
+
+    const savedLogo = localStorage.getItem('custom_logo');
+    if (savedLogo) applyLogo(savedLogo);
 
     if (token) {
         showDriveUI();
         loadFiles();
+    }
+
+    function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        updateThemeBtnText(next);
+    }
+
+    function updateThemeBtnText(theme) {
+        document.getElementById('themeBtn').innerText = theme === 'dark' ? '☀️ Light' : '🌙 Dark';
+    }
+
+    function updateCustomLogo(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const dataUrl = e.target.result;
+            localStorage.setItem('custom_logo', dataUrl);
+            applyLogo(dataUrl);
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function applyLogo(src) {
+        document.getElementById('defaultLogo').style.display = 'none';
+        const customImg = document.getElementById('customLogo');
+        customImg.src = src;
+        customImg.style.display = 'block';
     }
 
     async function login() {
@@ -72,7 +209,9 @@
 
         if (res.ok) {
             token = data.access_token;
+            currentUsername = u;
             localStorage.setItem('access_token', token);
+            localStorage.setItem('logged_username', u);
             showDriveUI();
             loadFiles();
         } else {
@@ -80,11 +219,21 @@
         }
     }
 
+    function logout() {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('logged_username');
+        location.reload();
+    }
+
     function showDriveUI() {
         document.getElementById('authBox').style.display = 'none';
         document.getElementById('uploadBox').style.display = 'block';
         document.getElementById('driveContent').style.display = 'block';
-        document.getElementById('userInfo').innerText = 'Authenticated';
+        
+        const userInfo = document.getElementById('userInfo');
+        userInfo.style.display = 'flex';
+        document.getElementById('usernameDisplay').innerText = currentUsername;
+        document.getElementById('userAvatar').innerText = currentUsername ? currentUsername.charAt(0) : 'U';
     }
 
     async function loadFiles() {
@@ -93,32 +242,75 @@
         });
         if (res.status === 401) {
             alert('Session expired. Please log in again.');
-            localStorage.removeItem('access_token');
-            location.reload();
+            logout();
             return;
         }
         const responseData = await res.json();
-        document.getElementById('dataSource').innerText = `Data Source: ${responseData.source}`;
+        document.getElementById('dataSource').innerText = `Source: ${responseData.source}`;
 
+        allFiles = responseData.data;
+        renderFiles(allFiles);
+    }
+
+    function filterFiles() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const filtered = allFiles.filter(f => f.filename.toLowerCase().includes(query));
+        renderFiles(filtered);
+    }
+
+    function setViewMode(mode) {
+        currentViewMode = mode;
+        const grid = document.getElementById('fileGrid');
+        
+        document.getElementById('gridViewBtn').classList.toggle('active', mode === 'grid');
+        document.getElementById('listViewBtn').classList.toggle('active', mode === 'list');
+
+        grid.className = `file-grid ${mode}-view`;
+        renderFiles(allFiles);
+    }
+
+    function renderFiles(files) {
         const grid = document.getElementById('fileGrid');
         grid.innerHTML = '';
 
-        responseData.data.forEach(file => {
+        if (files.length === 0) {
+            grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-subtle); padding: 40px;">No files found</div>`;
+            return;
+        }
+
+        files.forEach(file => {
             const sizeKB = (file.file_size_bytes / 1024).toFixed(1);
             const dateStr = new Date(file.uploaded_at).toLocaleString();
-            
-            grid.innerHTML += `
-                <div class="file-card">
-                    <div class="preview">
-                        <img src="${file.url}" alt="${file.filename}">
+
+            if (currentViewMode === 'grid') {
+                grid.innerHTML += `
+                    <div class="file-card">
+                        <div class="preview">
+                            <img src="${file.url}" alt="${file.filename}">
+                        </div>
+                        <div class="details">
+                            <div class="filename" title="${file.filename}">${file.filename}</div>
+                            <div class="meta">Size: ${sizeKB} KB</div>
+                            <div class="meta">Uploaded: ${dateStr}</div>
+                        </div>
                     </div>
-                    <div class="details">
-                        <div class="filename" title="${file.filename}">${file.filename}</div>
-                        <div class="meta">Size: ${sizeKB} KB</div>
-                        <div class="meta">Uploaded: ${dateStr}</div>
+                `;
+            } else {
+                grid.innerHTML += `
+                    <div class="file-card">
+                        <div class="file-main">
+                            <div class="preview">
+                                <img src="${file.url}" alt="${file.filename}">
+                            </div>
+                            <div class="filename" title="${file.filename}">${file.filename}</div>
+                        </div>
+                        <div class="details">
+                            <div class="meta">Size: ${sizeKB} KB</div>
+                            <div class="meta">Uploaded: ${dateStr}</div>
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            }
         });
     }
 

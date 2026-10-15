@@ -1,10 +1,12 @@
+version: '3.8'
+
 services:
   postgres:
     image: postgres:15-alpine
     container_name: local_postgres
     environment:
       POSTGRES_USER: admin
-      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_PASSWORD: password
       POSTGRES_DB: mediadb
     ports:
       - "5432:5432"
@@ -20,24 +22,23 @@ services:
   auth-service:
     build: ./services/auth-service
     container_name: local_auth_service
+    ports:
+      - "3000:3000"
     environment:
-      - DB_HOST=postgres
-      - DB_USER=admin
-      - DB_PASSWORD=secretpassword
-      - DB_NAME=mediadb
+      DATABASE_URL: postgresql://admin:password@postgres:5432/mediadb
+      JWT_SECRET: supersecretkey
     depends_on:
       - postgres
-      - redis
 
   file-service:
     build: ./services/file-service
     container_name: local_file_service
+    ports:
+      - "4000:4000"
     environment:
-      - DB_HOST=postgres
-      - DB_USER=admin
-      - DB_PASSWORD=secretpassword
-      - DB_NAME=mediadb
-      - REDIS_HOST=redis
+      DATABASE_URL: postgresql://admin:password@postgres:5432/mediadb
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: supersecretkey
     volumes:
       - ./uploads:/app/uploads
     depends_on:
