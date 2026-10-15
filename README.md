@@ -1,6 +1,6 @@
 # Cloud Media & Auth Microservice Platform
 
-A lightweight, containerized microservices application built to demonstrate modern backend engineering, user authentication, persistent data storage, and container orchestration using Docker, Python FastAPI, PostgreSQL, and Redis.
+A containerized full-stack microservices web platform built to demonstrate modern backend engineering, JWT authentication, persistent data storage, Redis caching, reverse proxy gateway routing, and a Google Drive-style web frontend.
 
 ---
 
@@ -12,17 +12,19 @@ A lightweight, containerized microservices application built to demonstrate mode
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)
 ![Nginx](https://img.shields.io/badge/Nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)
-![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
-![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
 
 ---
 
-## 🚀 Architecture & Features
+## 🚀 Key Architecture & Features
 
-* **Backend Framework:** Python (FastAPI) with auto-generated interactive OpenAPI/Swagger documentation.
-* **Database:** PostgreSQL 15 (Relational data & user credential persistence).
-* **Caching Layer:** Redis (In-memory session & cache management).
-* **Containerization:** Docker & Docker Compose (Multi-container orchestration on a single isolated network).
+- **Frontend Dashboard:** A Google Drive-style Web UI served on Port 80 for logging in, uploading images, viewing uploaded file grids, thumbnail rendering, and live data-source detection (Cache vs. Database).
+- **API Gateway (Nginx):** Public entry point on Port 80 routing static frontend traffic (`/`), Auth requests (`/api/v1/auth/`), and File service requests (`/api/v1/files/`).
+- **Auth Microservice:** FastAPI microservice handling bcrypt password hashing and PyJWT token generation.
+- **File Upload Microservice:** Protected by JWT Bearer security; handles image uploads, local host bind-mount storage (`./uploads`), and static image serving.
+- **Metadata Persistence:** PostgreSQL 15 relational database storing user records (`users`) and file upload metadata (`file_metadata`).
+- **In-Memory Caching (Redis):** Caching file list responses for `GET /my-files` with a 60-second TTL to accelerate response times (<1ms) and reduce database query load, featuring automated cache invalidation upon new file upload (`POST /upload`).
 
 ---
 
@@ -30,15 +32,23 @@ A lightweight, containerized microservices application built to demonstrate mode
 
 ```mermaid
 graph TD
-    User["User / Browser\n(Client Request)"] -->|1. Sends HTTP Request to\nhttp://localhost/api/v1/auth/| Port80["Nginx API Gateway\n(Port 80 - Public Entry Point)\n• Acts as the sole public reverse proxy\n• Inspects incoming URL paths\n• Hides internal microservices from the world"]
-    
-    Port80 -->|2. Forwards request internally\nover Docker network| Port3000["Auth Microservice\n(Port 3000 - FastAPI App)\n• Listens for internal HTTP traffic\n• Executes Python application logic\n• Handles bcrypt password hashing"]
-    
-    Port3000 -->|3. Queries / Persists data\nvia SQLAlchemy| DB["PostgreSQL Database\n(Port 5432)\n• Securely stores user records\n• Isolated within the Docker backend"]
+    User["User / Web Browser"] -->|Port 80| Gateway["Nginx API Gateway\n(Port 80)"]
 
-    style Port80 fill:#ffcc00,stroke:#333,stroke-width:2px,color:#000
-    style Port3000 fill:#3776AB,stroke:#333,stroke-width:2px,color:#fff
+    Gateway -->|/| Frontend["Frontend Static Assets\n(/public_html)"]
+    Gateway -->|/api/v1/auth/| AuthSvc["Auth Service\n(FastAPI - Port 3000)"]
+    Gateway -->|/api/v1/files/| FileSvc["File Service\n(FastAPI - Port 4000)"]
+
+    AuthSvc -->|bcrypt / JWT| DB[("PostgreSQL Database\n(Port 5432 / mediadb)")]
+    FileSvc -->|Metadata Tracking| DB
+    FileSvc -->|Lookups & Invalidation| Cache[("Redis In-Memory Cache\n(Port 6379)")]
+    FileSvc -->|File Storage| Volume[("Host Bind Mount\n(./uploads)")]
+
+    style Gateway fill:#ffcc00,stroke:#333,stroke-width:2px,color:#000
+    style AuthSvc fill:#3776AB,stroke:#333,stroke-width:2px,color:#fff
+    style FileSvc fill:#009688,stroke:#333,stroke-width:2px,color:#fff
     style DB fill:#336791,stroke:#333,stroke-width:2px,color:#fff
+    style Cache fill:#dc382d,stroke:#333,stroke-width:2px,color:#fff
+    style Frontend fill:#e34f26,stroke:#333,stroke-width:2px,color:#fff
 ```
 
 ---
@@ -47,15 +57,22 @@ graph TD
 
 ```text
 cloud-media-project/
-├── README.md                # Project documentation
-├── docker-compose.yml       # Docker Compose multi-container orchestration
-├── gateway/                 # Nginx API Gateway / Load Balancer configs
-└── services/
-    ├── auth-service/        # FastAPI user registration & authentication service
-    │   ├── Dockerfile
-    │   ├── main.py
-    │   └── requirements.txt
-    └── file-service/        # Media processing & upload service (In development)
+├── docker-compose.yml        # Docker Compose multi-container orchestration
+├── README.md                 # Project documentation
+├── frontend/
+│   └── index.html            # Google Drive-style web dashboard frontend
+├── gateway/
+│   └── nginx.conf            # Nginx API Gateway reverse proxy configuration
+├── services/
+│   ├── auth-service/         # User registration & JWT authentication service
+│   │   ├── Dockerfile
+│   │   ├── main.py
+│   │   └── requirements.txt
+│   └── file-service/         # Media upload, static file serving, & metadata tracking
+│       ├── Dockerfile
+│       ├── main.py
+│       └── requirements.txt
+└── uploads/                  # Host directory bind-mounted for image persistence
 ```
 
 ---
@@ -64,8 +81,8 @@ cloud-media-project/
 
 ### Prerequisites
 
-* [Docker Desktop](https://www.docker.com/) installed and running.
-* [Git](https://git-scm.com/) installed on your machine.
+- [Docker Desktop](https://www.docker.com/) installed and running.
+- [Git](https://git-scm.com/) installed on your machine.
 
 ### Installation & Running
 
@@ -75,7 +92,7 @@ cloud-media-project/
    cd docker-fastapi-microservice-stack
    ```
 
-2. **Spin up the stack using Docker Compose:**
+2. **Spin up the multi-container stack using Docker Compose:**
    ```bash
    docker compose up --build -d
    ```
@@ -87,47 +104,54 @@ cloud-media-project/
 
 ---
 
-## 🔗 Interactive API Documentation & Testing
+## 🔗 Endpoints & Web Access
 
-Once the services are up and running, interact directly with the **FastAPI Swagger UI**:
+| Service / Interface | Local URL | Description |
+| :--- | :--- | :--- |
+| **Web Dashboard** | [http://localhost/](http://localhost/) | Main Google Drive-style web page for authentication and uploads |
+| **Auth API Docs** | [http://localhost/api/v1/auth/docs](http://localhost/api/v1/auth/docs) | OpenAPI/Swagger interface for Auth endpoints |
+| **File Service Docs** | [http://localhost/api/v1/files/docs](http://localhost/api/v1/files/docs) | OpenAPI/Swagger interface for File processing endpoints |
 
-* **Auth Service Interactive Docs:** [http://localhost:3000/docs](http://localhost:3000/docs)
+### Key API Endpoints
 
-### Endpoints
-
-* `POST /register`: Registers a new user. Passwords are encrypted using `bcrypt` before storing them in PostgreSQL.
+- **`POST /api/v1/auth/register`**: Registers a new user with bcrypt-hashed credentials.
+- **`POST /api/v1/auth/login`**: Authenticates user and generates a Bearer JWT access token.
+- **`POST /api/v1/files/upload`**: Uploads an image file (JWT required), saves file to disk, persists metadata to PostgreSQL, and invalidates user cache.
+- **`GET /api/v1/files/my-files`**: Fetches user uploaded files metadata list (JWT required). Queries Redis cache first (<1ms TTL: 60s); falls back to PostgreSQL on cache miss.
+- **`GET /api/v1/files/static/{filename}`**: Serves stored images statically for frontend thumbnail rendering.
 
 ---
 
-## 🧪 Database Verification
+## 🧪 Database & Cache Verification
 
-To verify that registered users are successfully saved inside the PostgreSQL container, run:
+To inspect stored user records and file metadata directly inside the PostgreSQL container:
 
 ```bash
-docker exec -it local_postgres psql -U admin -d mediadb -c "SELECT id, username FROM users;"
+docker exec -it local_postgres psql -U admin -d mediadb -c "SELECT * FROM users;"
+docker exec -it local_postgres psql -U admin -d mediadb -c "SELECT * FROM file_metadata;"
+```
+
+To verify cached keys inside the Redis container:
+
+```bash
+docker exec -it local_redis redis-cli KEYS "*"
 ```
 
 ---
 
 ## 🛠️ Project Roadmap & Status
 
-> ⚠️ **Status:** *Work in Progress (Active Development)*
+- [x] **Phase 1: Core Foundation & Auth Service**
+  - Containerized PostgreSQL and Redis using Docker Compose.
+  - Developed Python FastAPI Auth Service with bcrypt password hashing and JWT issuance.
+  - Verified persistent database storage and initial OpenAPI Swagger integration.
 
-This project is currently under active development. Below is the step-by-step roadmap for full microservices implementation:
+- [x] **Phase 2: Gateway Routing, Media Storage & Caching**
+  - Integrated Nginx API Gateway on port `80` to proxy auth and file traffic dynamically.
+  - Built File Upload Microservice handling image files and host bind-mount storage.
+  - Added PostgreSQL metadata tracking (`file_metadata`) and Redis caching with automatic invalidation.
+  - Implemented Google Drive-style web frontend on Port 80 with thumbnail rendering.
 
-* [x] **Phase 1: Core Foundation & Auth Service** *(Completed)*
-  * Containerized PostgreSQL and Redis using Docker Compose.
-  * Developed Python FastAPI Auth Service with bcrypt password hashing.
-  * Verified persistent data storage inside the PostgreSQL container.
-  * Added Swagger UI documentation and initial Git integration.
-
-* [ ] **Phase 2: Gateway Routing & Media Storage** *(Next Step)*
-  * Integrate an **Nginx API Gateway / Load Balancer** on port `80` to route traffic dynamically to backend microservices.
-  * Build the **File Microservice** to handle media uploads (Images/PDFs) and URL shortening.
-  * Integrate object storage for file persistence and Redis caching for quick URL lookups.
-
-* [ ] **Phase 3: GitOps, CI/CD & Deployment** *(Future)*
-  * Set up **GitHub Actions** CI/CD pipeline for automated testing and container image checks.
-  * Write **Terraform** scripts to provision cloud infrastructure ($0 tier / low-spec VPS).
-  * Deploy the entire stack to the cloud using Docker Compose on Linux.
-```
+- [ ] **Phase 3: GitOps, CI/CD & Cloud Deployment**
+  - Set up **GitHub Actions** CI/CD pipeline for automated testing and container build checks.
+  - Provision cloud infrastructure and deploy containerized stack to Linux VPS.
